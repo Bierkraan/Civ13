@@ -308,7 +308,7 @@
 	attachment_slots = ATTACH_IRONSIGHTS|ATTACH_SCOPE
 	w_class = 4
 	force = 10
-	throwforce = 2
+	throwforce = 3
 	max_shells = 1
 	slot_flags = null
 	caliber = "a50cal"
@@ -342,7 +342,7 @@
 	attachment_slots = ATTACH_IRONSIGHTS|ATTACH_SCOPE
 	w_class = 4
 	force = 10
-	throwforce = 2
+	throwforce = 3
 	max_shells = 1
 	slot_flags = null
 	caliber = "a50cal"
