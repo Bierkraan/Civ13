@@ -331,8 +331,8 @@
 						spawn (0.1)
 							H.loc = null // fixes a bug where H is relocated even after we set H.loc = null
 							if (H.client)
-								H.client.eye = H_oloc
-								H.client.perspective = EYE_PERSPECTIVE
+								H.client.eye = H
+								H.client.perspective = MOB_PERSPECTIVE
 							var/send2spawn = (M_area && istype(M_area, /area/caribbean/admin)) ? "No" : input(usr_client, "Send [H] to their spawnpoint?") in list("Yes", "No")
 							switch (send2spawn)
 								if ("Yes")

@@ -1280,7 +1280,7 @@
 	desc = "A flare shell."
 	icon_state = "flaregun-shell"
 	spent_icon = "flaregun-spent"
-	projectile_type = /obj/item/projectile/flare
+//	projectile_type = /obj/item/projectile/flare
 
 // Lasers
 

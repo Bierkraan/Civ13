@@ -86,7 +86,7 @@
 				var/list/dilating = list("peyote"=5,"mindbreaker"=1)
 				if (M.reagents.has_any_reagent(pinpoint) || H.ingested.has_any_reagent(pinpoint))
 					user << "<span class='notice'>\The [M]'s pupils are already pinpoint and cannot narrow any more.</span>"
-				else if (M.reagents.has_any_reagent(dilating) || H.ingested.has_any_reagent(dilating))
+				else if (H.shock_stage >= 30 || M.reagents.has_any_reagent(dilating) || H.ingested.has_any_reagent(dilating))
 					user << "<span class='notice'>\The [M]'s pupils narrow slightly, but are still very dilated.</span>"
 				else
 					user << "<span class='notice'>\The [M]'s pupils narrow.</span>"
@@ -106,7 +106,7 @@
 	desc = "A red flare. There are instructions on the side reading 'pull cord, make light'. Lasts for about 5 minutes."
 	brightness_on = 4 // Pretty bright.
 	light_power = 2
-	light_color = "#e58775"
+	light_color = "#e95f4d"
 	icon_state = "flare"
 	item_state = "flare"
 	turn_on_sound = 'sound/effects/Custom_flare.ogg'
@@ -203,13 +203,11 @@
 		var/mob/living/human/H = user
 		if(istype(H) && !H.in_throw_mode)
 			H.throw_mode_on()
+		sleep(rand(80,120))
+		activate_signal(user)
 
-/obj/item/flashlight/flare/throw_impact(atom/hit_atom)
-	if (on)
-		if (ishuman(hit_atom))
-			var/mob/living/human/H = hit_atom
-			H.IgniteMob()
-	..()
+/obj/item/flashlight/flare/proc/activate_signal(mob/living/human/user as mob)
+	return
 
 /obj/item/flashlight/flare/on/New()
 	..()
@@ -223,10 +221,32 @@
 	name = "white phosphorus flare"
 	desc = "A white phosphorus flare. There are instructions on the side reading 'pull cord, make light'. Lasts for about 5 minutes."
 	icon_state = "flareW"
+	flame_tint = "#fff6cc"
 	flame_base_tint = "#eeeeee"
+	light_color = "#eeeeee"
 	projectile_type = /obj/item/flashlight/flare/white/on
 /obj/item/flashlight/flare/white/on/New()
 	. = ..()
+	turn_on()
+/obj/item/flashlight/flare/white/alwayson/New()
+	..()
+	fuel = INFINITY
+	turn_on()
+
+/obj/item/flashlight/flare/green
+	name = "green flare"
+	desc = "A green phosphorus flare. There are instructions on the side reading 'pull cord, make light'. Lasts for about 5 minutes."
+	icon_state = "flareG"
+	flame_tint = "#d2ffcc"
+	flame_base_tint = "#258a00"
+	light_color = "#6dec3f"
+	projectile_type = /obj/item/flashlight/flare/green/on
+/obj/item/flashlight/flare/green/on/New()
+	. = ..()
+	turn_on()
+/obj/item/flashlight/flare/green/alwayson/New()
+	..()
+	fuel = INFINITY
 	turn_on()
 
 /obj/item/flashlight/flare/signal
@@ -234,101 +254,91 @@
 	desc = "A signal flare for signalling spot to aircraft above. There are instructions on the side reading 'pull cord, make light'. Lasts for about 2 minutes."
 	icon_state = "flareW"
 	flame_base_tint = "#07d800"
-	var/mob/living/human/caller = null
-	
-	var/attack_direction = "NORTH"
-	var/list/attack_direction_list = list("NORTH", "EAST", "SOUTH", "WEST")
 
-	var/payload = null
-	var/list/payload_list = list("Rockets")
-
-	var/call_in_time = 10 SECONDS
-
-/obj/item/flashlight/flare/signal/attack_self(mob/living/user as mob)
-	if(!ishuman(user))
-		return
-	var/mob/living/human/H = user
-	if(!fuel)
-		to_chat(user, SPAN_NOTICE("It's out of fuel."))
-		return FALSE
-	if(on)
-		if(!do_after(user, 2 SECONDS, src))
-			return
-		if(!on)
-			return
-		user.visible_message(SPAN_WARNING("[user] snuffs out [src]."), SPAN_WARNING("You snuff out [src], burning your hand."))
-		user.adjustBurnLoss(7)
-		burn_out()
-		//TODO: add snuff out sound
-		return
-
-	// All good, turn it on.
-	if(src)
-		caller = H
-		user.visible_message(SPAN_NOTICE("[user] activates the flare."), SPAN_NOTICE("You pull the cord on the flare, activating it!"))
-		playsound(src, turn_on_sound, 75, TRUE)
-		turn_on()
-		if(istype(H) && !H.in_throw_mode)
-			H.throw_mode_on()
-		var/call_in_time_offset = rand(-30,30)
-		sleep((call_in_time + call_in_time_offset))
-		activate_signal()
-
-/obj/item/flashlight/flare/signal/proc/get_faction_aircraft(var/mob/living/human/H)
-	var/aircraft_name
-	switch (H.faction_text) // Check what faction has called in the airstrike and select an aircraft.
-		if (DUTCH)
-			aircraft_name = "F-16"
-		if (GERMAN)
-			if (map.ordinal_age == 6)
-				aircraft_name = "Ju 87 Stuka"
-			else
-				return
-		if (AMERICAN)
-			aircraft_name = "F-16"
-		if (RUSSIAN)
-			if (map.ordinal_age == 6)
-				aircraft_name = "IL-2"
-			else
-				aircraft_name = "Su-25"
-	return aircraft_name
-
-/obj/item/flashlight/flare/signal/proc/get_faction_num(var/mob/living/human/H)
-	var/faction_num
-	if (map.faction1 == H.faction_text)
-		faction_num = 1
-	else if (map.faction2 == H.faction_text)
-		faction_num = 2
-	return faction_num
-
-/obj/item/flashlight/flare/signal/proc/get_payload_class()
-	var/payload_class
-	switch (payload)
-		if ("Rockets")
-			payload_class = 1
-		if ("50 kg Bomb")
-			payload_class = 2
-		if ("250 kg Bomb")
-			payload_class = 3
-	return payload_class
-
-/obj/item/flashlight/flare/signal/proc/activate_signal()
-	anchored = TRUE
-	var/turf/T = get_turf(src)
-	payload = payload_list[1]
-	attack_direction = pick(attack_direction_list)
-
-	T.try_airstrike(caller.ckey, caller.faction_text, get_faction_aircraft(caller), attack_direction, payload, get_payload_class())
-	sleep(50)
+/obj/item/flashlight/flare/signal/activate_signal(mob/living/human/user as mob)
+	var/turf/target = get_turf(src)
+	var/strikenum = 4
+	var/xoffset
+	var/yoffset
+	switch(user.faction_text)
+		if ("DUTCH")
+			new /obj/effect/plane_flyby/f16_no_message(target)
+			world << SPAN_DANGER("<font size=4>The clouds open up as a F-16 cuts through and fires off a burst of rockets!</font>")
+		if ("RUSSIAN")
+			new /obj/effect/plane_flyby/su25_no_message(target)
+			world << SPAN_DANGER("<font size=4>The clouds open up as a Su-25 cuts through and fires off a burst of rockets!</font>")
+	sleep(15)
+	for (var/i = 1, i <= strikenum, i++)
+		spawn(i*8)
+			xoffset = rand(-4,4)
+			yoffset = rand(-4,4)
+			explosion(locate((target.x + xoffset),(target.y + yoffset),target.z),0,1,5,3,sound='sound/weapons/Explosives/FragGrenade.ogg')
 	qdel(src)
 
+//ww2 p-47 lighting CAS support, inaccurate and slow but saturates a area with 8 rockets
+/obj/item/flashlight/flare/signal/p47
+	name = "signal flare"
+	desc = "A signal flare for signalling to CAS where to shoot. There are instructions on the side reading 'pull cord, make light'. Lasts for about 2 minutes."
+	icon_state = "flareW"
+	flame_tint = "#d2ffcc"
+	flame_base_tint = "#258a00"
+	light_color = "#6dec3f"
+
+/obj/item/flashlight/flare/signal/p47/activate_signal(mob/living/human/user as mob) ///fires off many rockets but is very inaccurate
+	var/turf/target = get_turf(src)
+	var/strikenum = 8
+	var/xoffset
+	var/yoffset
+	if (user && user.faction_text == "AMERICAN")
+		new /obj/effect/plane_flyby/p47(target)
+		world << SPAN_DANGER("<font size=4>A P-47 thunderbolt flies above and fires off a burst of rockets!</font>")
+	else
+		new /obj/effect/plane_flyby/p47_no_message(target)
+		world << SPAN_DANGER("<font size=4>A Some kind of a plane flies through the clouds and fires off a burst of rockets!</font>")
+	spawn(20)
+		for (var/i = 1, i <= strikenum, i++)
+			spawn(i*8)
+				xoffset = rand(-6,6)
+				yoffset = rand(-6,6)
+				explosion(locate((target.x + xoffset),(target.y + yoffset),target.z),1,3,6,8,sound='sound/weapons/Explosives/FragGrenade.ogg')
+		qdel(src)
+
+/obj/item/flashlight/flare/signal/p47/activated/New()
+	..()
+	turn_on()
+	activate_signal()
+
 // Projectile
-/obj/item/projectile/flare
+/obj/item/projectile/shell/missile/flare
 	icon_state = "flare"
 	damage = 10
 	damage_type = BURN
-/obj/item/projectile/flare/on_impact(mob/living/human/M as mob)
-	ignite_turf_lowchance(get_turf(M),3,70)
-	spawn (0.01)
-		qdel(src)
-	..()
+//	tracer_type = /obj/effect/projectile/tracer/missile/flare
+//	speed_multiplier = 1
+	var/flare_type = /obj/item/flashlight/flare/on
+	light_color = "#e95f4d"
+
+/obj/item/projectile/shell/missile/flare/launch(atom/target, mob/user, obj/structure/cannon/modern/tank/launcher, x_offset, y_offset)
+	. = ..()
+	set_light(3)
+
+/obj/item/projectile/shell/missile/flare/initiate(turf/T)
+	new flare_type(permutated[permutated.len])	
+	loc = null
+	qdel(src)
+	return FALSE
+
+/obj/item/projectile/shell/missile/flare/green
+	light_color = "#00ff44"
+//	tracer_type = /obj/effect/projectile/tracer/missile/flare/green
+	flare_type = /obj/item/flashlight/flare/green/on
+
+/obj/item/projectile/shell/missile/flare/plane
+	light_color = "#00ff44"
+//	tracer_type = /obj/effect/projectile/tracer/missile/flare/green
+	flare_type = /obj/item/flashlight/flare/signal/p47/activated
+
+/obj/item/projectile/shell/missile/flare/white
+	light_color = "#ffffff"
+//	tracer_type = /obj/effect/projectile/tracer/missile/flare/white
+	flare_type = /obj/item/flashlight/flare/white/on

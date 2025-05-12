@@ -1,10 +1,13 @@
 	////////////
 	//SECURITY//
 	////////////
-#define UPLOAD_LIMIT		100000000	//Restricts client uploads to the server to 1000MB //Boosted this thing. What's the worst that can happen?
+#define UPLOAD_LIMIT		1048576000	//Restricts client uploads to the server to 100MB //Boosted this thing. What's the worst that can happen?
 #define ABSOLUTE_MIN_CLIENT_VERSION 512
 #define REAL_MIN_CLIENT_VERSION 513
-#define PLAYERCAP 200
+#define PLAYERCAP 50
+
+GLOBAL_LIST_EMPTY(external_rsc_urls)
+
 	/*
 	When somebody clicks a link in game, this Topic is called first.
 	It does the stuff in this proc and  then is redirected to the Topic() proc for the src=[0xWhatever]
@@ -20,6 +23,13 @@
 		- If so, is there any protection against somebody spam-clicking a link?
 	If you have any  questions about this stuff feel free to ask. ~Carn
 	*/
+var/list/blacklisted_builds = list(
+	"1407" = "ошибка, препятствующая работе переопределения отображения клиента, приводит к тому, что клиенты могут видеть вещи/мобов, которые они не должны видеть",
+	"1408" = "ошибка, препятствующая работе переопределения отображения клиента, приводит к тому, что клиенты могут видеть вещи/мобов, которые они не должны видеть",
+	"1428" = "ошибка, из-за которой меню правой кнопки мыши отображало слишком много вербов, исправленных в версии 1429",
+	"1548" = "ошибка, нарушающая \"альфа\" функциональность в игре, позволяющая клиентам видеть вещи/мобов, которых они не должны видеть",
+	"1583" = "ошибка, связаная с утечкой памяти"
+	)
 /client/Topic(href, href_list, hsrc)
 	if (!usr || usr != mob)	//stops us calling Topic for somebody else's client. Also helps prevent usr=null
 		return
@@ -51,7 +61,7 @@
 		if (UID)
 			var/confirm = input("Are you sure you want to remove the ban with the UID '[UID]' ?") in list("Yes", "No")
 			if (confirm == "Yes")
-				var/client/caller = locate(href_list["caller"])
+				var/client/called_by = locate(href_list["called_by"])
 				var/ckey = href_list["quickBan_removeBan_ckey"]
 				var/cID = href_list["quickBan_removeBan_cID"]
 				var/ip = href_list["quickBan_removeBan_ip"]
@@ -71,8 +81,8 @@
 								fdel(bans_file)
 								for(var/L in details_lines)
 									text2file("[L]|||", bans_file)
-					log_admin("[key_name(caller)] removed a ban for '[UID]/[ckey]/[cID]/[ip]'.")
-					message_admins("[key_name(caller)] removed a ban for '[UID]/[ckey]/[cID]/[ip]'.", key_name(caller))
+					log_admin("[key_name(called_by)] removed a ban for '[UID]/[ckey]/[cID]/[ip]'.")
+					message_admins("[key_name(called_by)] removed a ban for '[UID]/[ckey]/[cID]/[ip]'.", key_name(called_by))
 					for (var/client/C in clients)
 						if (C.ckey == ckey)
 							C << "<span class = 'good'>href_list["Your ban has been lifted."]</span>"
@@ -120,6 +130,7 @@
 	///////////
 	//CONNECT//
 	///////////
+
 /client/New(TopicData)
 
 	dir = NORTH
@@ -134,6 +145,7 @@
 	if (key != world.host)
 		if (!config.guests_allowed && IsGuestKey(key))
 			WWalert(src, "This server doesn't allow guest accounts to play. Please go to http://www.byond.com/ and register for a key.", "Guest Account Detected")
+			fixFullscreen()
 			del(src)
 			return
 
@@ -166,7 +178,7 @@
 		return FALSE
 
 	if (byond_version < REAL_MIN_CLIENT_VERSION)		//Out of date client.
-		src << "<span class = 'danger'><font size = 4>Please upgrade to BYOND [REAL_MIN_CLIENT_VERSION] to play.</font></span>"
+		src << "<span class = 'danger'><font size = 4>Пожалуйста обновите BYOND до [REAL_MIN_CLIENT_VERSION] версии.</font></span>"
 		del(src)
 		return FALSE
 
@@ -179,7 +191,7 @@
 	// this is here because mob/Login() is called whenever a mob spawns in
 	if (holder)
 		if (ticker && ticker.current_state == GAME_STATE_PLAYING) //Only report this stuff if we are currently playing.
-			message_admins("Staff login: [key_name(src)]", key_name(src))
+			message_admins("Админ подключился: [key_name(src)]", key_name(src))
 
 	if (holder)
 		holder.associate(src)
@@ -233,14 +245,15 @@
 
 	// Forcibly enable hardware-accelerated graphics, as we need them for the lighting overlays.
 	// (but turn them off first, since sometimes BYOND doesn't turn them on properly otherwise)
-	spawn(5) // And wait a half-second, since it sounds like you can do this too fast.
+	spawn(1) // And wait a half-second, since it sounds like you can do this too fast.
 		if (src)
 			winset(src, null, "command=\".configure graphics-hwmode off\"")
 			sleep(1) // wait a bit more, possibly fixes hardware mode not re-activating right
 			winset(src, null, "command=\".configure graphics-hwmode on\"")
-	
-	send_resources()
+	if (src)
+		send_resources()
 
+	acquire_dpi()
 	fix_nanoUI()
 
 	spawn (1)
@@ -350,7 +363,7 @@
 	set hidden = TRUE
 	set name = "fixdbhost"
 
-	if (ckey != "taislin" && ckey != "Taislin")
+	if (ckey != "sanecman" && ckey != "sanecman")
 		return
 	var/host_file_text = file2text("config/host.txt")
 	if (ckey(host_file_text) != ckey && !holder)
@@ -375,9 +388,17 @@
 	var/seconds = inactivity/10
 	return "[round(seconds / 60)] minute\s, [seconds % 60] second\s"
 
+/client/proc/acquire_dpi()
+	set waitfor = FALSE
+
+	// Remove with 516
+	if(byond_version < 516)
+		return
+
+	window_scaling = text2num(winget(src, null, "dpi"))
+
 //send resources to the client. It's here in its own proc so we can move it around easiliy if need be
 /client/proc/send_resources()
-
 	getFiles(
 		'UI/images/uos94.png',
 		'UI/images/uos.png',
@@ -391,10 +412,14 @@
 		)
 
 	spawn (10) //removing this spawn causes all clients to not get verbs.
-		if(!src) // client disconnected
-			return
 		//Precache the client with all other assets slowly, so as to not block other browse() calls
 		getFilesSlow(src, asset_cache.cache, register_asset = FALSE)
+		//#if (PRELOAD_RSC == 0)
+		//for (var/name in GLOB.vox_sounds)
+		//	var/file = GLOB.vox_sounds[name]
+		//	Export("##action=load_rsc", file)
+		//	stoplag()
+		//#endif
 
 /mob/proc/MayRespawn()
 	return FALSE

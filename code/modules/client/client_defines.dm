@@ -73,4 +73,7 @@
 	var/mouse_screen_pixel_x = 0
 	var/mouse_screen_pixel_y = 0
 
+	/// If this client has any windows scaling applied
+	var/window_scaling
+
 /client/authenticate = FALSE

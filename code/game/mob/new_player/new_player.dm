@@ -30,7 +30,7 @@ var/global/redirect_all_players = null
 	new_player_mob_list += src
 
 
-	spawn (10)
+	spawn(10)
 		if (client)
 			movementMachine_clients -= client
 	if (!client || !client.holder || (client.holder.rank != "Host" && client.holder.rank != "Admiral"))
@@ -970,6 +970,7 @@ var/global/redirect_all_players = null
 		if (client && client.prefs.gender == FEMALE)
 			WWalert(usr,"You must be male to play as this faction.","Error")
 			return FALSE
+
 	if (job.is_ww1)
 		if (client && client.prefs.gender == FEMALE)
 			WWalert(usr,"You must be male to play as this faction.","Error")
@@ -999,6 +1000,7 @@ var/global/redirect_all_players = null
 		if (client.prefs.gender == FEMALE)
 			WWalert(usr,"You must be male to play as this faction.","Error")
 			return FALSE
+			
 	if (job.is_yakuza)
 		var/yy_nr = processes.job_data.get_active_positions_name("Yamaguchi-Gumi Kaiin")
 		var/yi_nr = processes.job_data.get_active_positions_name("Ichiwa-Kai Kaiin")
@@ -1580,8 +1582,7 @@ var/global/redirect_all_players = null
 				else if (!replaced_faction_title && findtext(dat[v], "&&[key]&&"))
 					dat[v] = replacetext(dat[v], "&&[key]&&", "")
 					replaced_faction_title = TRUE
-
-	if (!any_available_jobs && !ticker)
+Моя грудь сильно болит!
 		WWalert(usr,"The game is loading.","Error")
 		return
 
@@ -1610,7 +1611,7 @@ var/global/redirect_all_players = null
 		<br>
 	"}
 
-	spawn (1)
+	spawn(1)
 		src << browse(data, "window=latechoices;size=600x640;can_close=1")
 
 /mob/new_player/proc/create_character(mobtype)

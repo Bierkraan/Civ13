@@ -355,16 +355,6 @@
 	else
 		user << SPAN_WARNING("\The [src] is closed!")
 
-/obj/item/weapon/gun/launcher/flaregun/civilian/consume_next_projectile()
-	if(flares.len)
-		var/obj/item/ammo_casing/flare/I = flares[1]
-		var/obj/item/projectile/flare/M = new I.projectile_type(src)
-		if (ishuman(src.loc))
-			M.dir = src.loc.dir
-		flares -= I
-		return M
-	return null
-
 //MLAW
 //Panzerfaust
 /obj/item/weapon/gun/launcher/rocket/single_shot
